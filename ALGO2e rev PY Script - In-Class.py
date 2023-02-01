@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 s = requests.Session()
-s.headers.update({'X-API-key': 'W9OPB2TD'}) # Dektop
+s.headers.update({'X-API-key': '336UI8XK'}) # Desktop
 
 MAX_LONG_EXPOSURE = 25000
 MAX_SHORT_EXPOSURE = -25000
@@ -70,12 +70,32 @@ def main():
             ticker_symbol = ticker_list[i]
             position = get_position()
             best_bid_price, best_ask_price = get_bid_ask(ticker_symbol)
-       
+            
+            BID_ADJUSTMENT = 0
+            ASK_ADJUSTMENT = 0
+
+            ADJ_THRESHOLD_1 = 10000
+            ADJ_THRESHOLD_2 = 15000
+
+            # Placeholder
+            if position > ADJ_THRESHOLD_2:
+                BID_ADJUSTMENT = 0.2
+
+            elif position > ADJ_THRESHOLD_1:
+                BID_ADJUSTMENT = 0.1
+
+            if position > ADJ_THRESHOLD_2:
+                ASK_ADJUSTMENT = 0.2
+
+            elif position > ADJ_THRESHOLD_1:
+                ASK_ADJUSTMENT = 0.1
+
+
             if position < MAX_LONG_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_bid_price, 'action': 'BUY'})
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_bid_price - BID_ADJUSTMENT, 'action': 'BUY'})
               
             if position > MAX_SHORT_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_ask_price, 'action': 'SELL'})
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_ask_price + ASK_ADJUSTMENT, 'action': 'SELL'})
 
             sleep(0.5) 
 
