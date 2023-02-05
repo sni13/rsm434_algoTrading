@@ -71,13 +71,21 @@ def main():
             position = get_position()
             best_bid_price, best_ask_price = get_bid_ask(ticker_symbol)
             
+            # Price Adjustment Stuff
             BID_ADJUSTMENT = 0
             ASK_ADJUSTMENT = 0
 
             ADJ_THRESHOLD_1 = 10000
             ADJ_THRESHOLD_2 = 15000
 
-            # Placeholder
+            # Volume Adjustment Stuff
+            BID_VOLUME_ADJ = 0
+            ASK_VOLUME_ADJ = 0
+
+            VOL_THRESH_1 = 10000
+            VOL_THRESH_2 = 15000
+
+            # Price Adjustment Implementation
             if position > ADJ_THRESHOLD_2:
                 BID_ADJUSTMENT = 0.2
 
@@ -90,12 +98,25 @@ def main():
             elif position > ADJ_THRESHOLD_1:
                 ASK_ADJUSTMENT = 0.1
 
+            # Volume Adjustment Implementation
+            if position > VOL_THRESH_2:
+                BID_VOLUME_ADJ = 200
 
+            elif position > VOL_THRESH_1:
+                BID_VOLUME_ADJ = 300
+
+            if position > VOL_THRESH_2:
+                ASK_VOLUME_ADJ = 200
+
+            elif position > VOL_THRESH_1:
+                ASK_VOLUME_ADJ = 300
+
+            # Punching in Orders
             if position < MAX_LONG_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_bid_price - BID_ADJUSTMENT, 'action': 'BUY'})
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(ORDER_LIMIT - BID_VOLUME_ADJ, abs(MAX_LONG_EXPOSURE) - abs(position)), 'price': best_bid_price - BID_ADJUSTMENT, 'action': 'BUY'})
               
             if position > MAX_SHORT_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_ask_price + ASK_ADJUSTMENT, 'action': 'SELL'})
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(ORDER_LIMIT + ASK_VOLUME_ADJ, abs(MAX_SHORT_EXPOSURE) - abs(position)), 'price': best_ask_price + ASK_ADJUSTMENT, 'action': 'SELL'})
 
             sleep(0.5) 
 
