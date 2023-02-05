@@ -59,10 +59,19 @@ def get_order_status(order_id):
         order = resp.json()
         return order['status']
 
+def test_compelete(resps):
+    for resp in resps:
+        resp.json()
+        order_id = resp.json()['order_id']
+        resp2 = None
+        while not resp2:
+            resp2 = s.get ('http://localhost:9999/v1/orders' + '/' + str(order_id))
+
+
 def main():
     tick, status = get_tick()
     ticker_list = ['CNR','RY','AC']
-
+    
     while status == 'ACTIVE':        
 
         for i in range(3):
@@ -97,19 +106,8 @@ def main():
             # SET VOLUME ADJUSTMENTS
             VOLUME_ADJUSTMENT = 0
             LONG_VOLUME, SHORT_VOLUME = ORDER_LIMIT, ORDER_LIMIT
-            if abs(position) >= 4000:
-                VOLUME_ADJUSTMENT += 200
-                
-            elif abs(position) >= 3000:
-                VOLUME_ADJUSTMENT += 150
-                
-            elif abs(position) >= 2000:
-                VOLUME_ADJUSTMENT += 100
-
-            elif abs(position) >= 1000:
-                VOLUME_ADJUSTMENT += 50
-            
-           
+            VOLUME_ADJUSTMENT = min(abs(position) // 30, 500)
+        
             # make adjustment on only 1 side
             if position > 0: # long position
                 LONG_PRICE -= PRICE_ADJUSTMENT
@@ -119,12 +117,12 @@ def main():
                 SHORT_VOLUME -= VOLUME_ADJUSTMENT
 
             if position < MAX_LONG_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
+                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
                
             if position > MAX_SHORT_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
+                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
             
-            sleep(0.5) 
+            test_compelete([resp1, resp2])
 
             s.post('http://localhost:9999/v1/commands/cancel', params = {'ticker': ticker_symbol})
 
