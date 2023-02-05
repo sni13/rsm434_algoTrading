@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 s = requests.Session()
-s.headers.update({'X-API-key': '336UI8XK'}) # Desktop
+s.headers.update({'X-API-key': 'GWMV82CC'}) # Desktop
 
 MAX_LONG_EXPOSURE = 25000
 MAX_SHORT_EXPOSURE = -25000
@@ -42,7 +42,7 @@ def get_position():
     resp = s.get ('http://localhost:9999/v1/securities')
     if resp.ok:
         book = resp.json()
-        return abs(book[0]['position']) + abs(book[1]['position']) + abs(book[2]['position'])
+        return book[0]['position'] + book[1]['position'] + book[2]['position']
 
 def get_open_orders(ticker):
     payload = {'ticker': ticker}
@@ -71,32 +71,59 @@ def main():
             position = get_position()
             best_bid_price, best_ask_price = get_bid_ask(ticker_symbol)
             
-            BID_ADJUSTMENT = 0
-            ASK_ADJUSTMENT = 0
 
-            ADJ_THRESHOLD_1 = 10000
-            ADJ_THRESHOLD_2 = 15000
+            # SET PRICE ADJUSTMENTS
+            PRICE_ADJUSTMENT = 0
 
-            # Placeholder
-            if position > ADJ_THRESHOLD_2:
-                BID_ADJUSTMENT = 0.2
+            ADJ_THRESHOLD_1 = 5000
+            ADJ_THRESHOLD_2 = 7500
+            ADJ_THRESHOLD_3 = 10000
+            ADJ_THRESHOLD_4 = 12000
 
-            elif position > ADJ_THRESHOLD_1:
-                BID_ADJUSTMENT = 0.1
+            if abs(position) > ADJ_THRESHOLD_4:
+                PRICE_ADJUSTMENT = 0.1
 
-            if position > ADJ_THRESHOLD_2:
-                ASK_ADJUSTMENT = 0.2
+            elif abs(position) > ADJ_THRESHOLD_3:
+                PRICE_ADJUSTMENT = 0.05
 
-            elif position > ADJ_THRESHOLD_1:
-                ASK_ADJUSTMENT = 0.1
+            elif abs(position) > ADJ_THRESHOLD_2:
+                PRICE_ADJUSTMENT = 0.02
 
+            elif abs(position) > ADJ_THRESHOLD_1:
+                PRICE_ADJUSTMENT = 0.01
+
+            LONG_PRICE, SHORT_PRICE = best_bid_price, best_ask_price
+
+            # SET VOLUME ADJUSTMENTS
+            VOLUME_ADJUSTMENT = 0
+            LONG_VOLUME, SHORT_VOLUME = ORDER_LIMIT, ORDER_LIMIT
+            if abs(position) >= 4000:
+                VOLUME_ADJUSTMENT += 200
+                
+            elif abs(position) >= 3000:
+                VOLUME_ADJUSTMENT += 150
+                
+            elif abs(position) >= 2000:
+                VOLUME_ADJUSTMENT += 100
+
+            elif abs(position) >= 1000:
+                VOLUME_ADJUSTMENT += 50
+            
+           
+            # make adjustment on only 1 side
+            if position > 0: # long position
+                LONG_PRICE -= PRICE_ADJUSTMENT
+                LONG_VOLUME -= VOLUME_ADJUSTMENT
+            elif position < 0: # short position
+                SHORT_PRICE += PRICE_ADJUSTMENT
+                SHORT_VOLUME -= VOLUME_ADJUSTMENT
 
             if position < MAX_LONG_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_bid_price - BID_ADJUSTMENT, 'action': 'BUY'})
-              
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
+               
             if position > MAX_SHORT_EXPOSURE:
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': ORDER_LIMIT, 'price': best_ask_price + ASK_ADJUSTMENT, 'action': 'SELL'})
-
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
+            
             sleep(0.5) 
 
             s.post('http://localhost:9999/v1/commands/cancel', params = {'ticker': ticker_symbol})
