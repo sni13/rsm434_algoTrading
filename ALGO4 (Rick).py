@@ -3,7 +3,7 @@ from time import sleep
 import numpy as np
 
 s = requests.Session()
-s.headers.update({'X-API-key': 'W9OPB2TD'}) # Make sure you use YOUR API Key
+s.headers.update({'X-API-key': '336UI8XK'}) # Make sure you use YOUR API Key
 
 # global variables
 MAX_LONG_EXPOSURE_NET = 25000
@@ -84,13 +84,13 @@ def main():
             
             if market_prices[0, 0] + market_prices[1, 0] > market_prices[2, 1]: 
                 resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RGLD', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[0, 1], 'action': 'SELL'})
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RFIN', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[1, 1], 'action': 'SELL'})
                 resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'INDX', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[2, 0], 'action': 'BUY'})
-              
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RFIN', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[1, 1], 'action': 'SELL'})
+                
             if market_prices[0, 1] + market_prices[1, 1] < market_prices[2, 0]: 
                 resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RGLD', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[0, 0], 'action': 'BUY'})
-                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RFIN', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[1, 0], 'action': 'BUY'})
                 resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'INDX', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[2, 1], 'action': 'SELL'})
+                resp = s.post('http://localhost:9999/v1/orders', params = {'ticker': 'RFIN', 'type': 'MARKET', 'quantity': ORDER_LIMIT, 'price': market_prices[1, 0], 'action': 'BUY'})
 
             sleep(0.5) 
 
