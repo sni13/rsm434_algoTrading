@@ -67,6 +67,13 @@ def test_compelete(resps):
         while not resp2:
             resp2 = s.get ('http://localhost:9999/v1/orders' + '/' + str(order_id))
 
+def get_ticker_position(ticker):
+    ticker_dict = {'CNR': 0,'RY': 1,'AC': 2}
+    index = ticker_dict[ticker]
+    resp = s.get ('http://localhost:9999/v1/securities')
+    if resp.ok:
+        book = resp.json()
+        return book[index]['position']
 
 def main():
     tick, status = get_tick()
@@ -77,28 +84,29 @@ def main():
         for i in range(3):
             
             ticker_symbol = ticker_list[i]
-            position = get_position()
+            sum_position = get_position() #sum of net position for three stocks
+            net_position = get_ticker_position(ticker_symbol) # net position for particular ticker
             best_bid_price, best_ask_price = get_bid_ask(ticker_symbol)
             
 
             # SET PRICE ADJUSTMENTS
             PRICE_ADJUSTMENT = 0
 
-            ADJ_THRESHOLD_1 = 5000
-            ADJ_THRESHOLD_2 = 7500
-            ADJ_THRESHOLD_3 = 10000
-            ADJ_THRESHOLD_4 = 12000
+            ADJ_THRESHOLD_1 = 2000
+            ADJ_THRESHOLD_2 = 3500
+            ADJ_THRESHOLD_3 = 4000
+            ADJ_THRESHOLD_4 = 6000
 
-            if abs(position) > ADJ_THRESHOLD_4:
+            if abs(net_position) > ADJ_THRESHOLD_4:
                 PRICE_ADJUSTMENT = 0.1
 
-            elif abs(position) > ADJ_THRESHOLD_3:
+            elif abs(net_position) > ADJ_THRESHOLD_3:
                 PRICE_ADJUSTMENT = 0.05
 
-            elif abs(position) > ADJ_THRESHOLD_2:
+            elif abs(net_position) > ADJ_THRESHOLD_2:
                 PRICE_ADJUSTMENT = 0.02
 
-            elif abs(position) > ADJ_THRESHOLD_1:
+            elif abs(net_position) > ADJ_THRESHOLD_1:
                 PRICE_ADJUSTMENT = 0.01
 
             LONG_PRICE, SHORT_PRICE = best_bid_price, best_ask_price
@@ -106,21 +114,21 @@ def main():
             # SET VOLUME ADJUSTMENTS
             VOLUME_ADJUSTMENT = 0
             LONG_VOLUME, SHORT_VOLUME = ORDER_LIMIT, ORDER_LIMIT
-            VOLUME_ADJUSTMENT = min(abs(position) // 30, 500)
+            VOLUME_ADJUSTMENT = min(abs(net_position) // 20, 500)
         
             # make adjustment on only 1 side
-            if position > 0: # long position
+            if net_position > 0: # long position
                 LONG_PRICE -= PRICE_ADJUSTMENT
                 LONG_VOLUME -= VOLUME_ADJUSTMENT
-            elif position < 0: # short position
+            elif net_position < 0: # short position
                 SHORT_PRICE += PRICE_ADJUSTMENT
                 SHORT_VOLUME -= VOLUME_ADJUSTMENT
 
-            if position < MAX_LONG_EXPOSURE:
-                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
+            if sum_position < MAX_LONG_EXPOSURE:
+                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-sum_position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
                
-            if position > MAX_SHORT_EXPOSURE:
-                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
+            if sum_position > MAX_SHORT_EXPOSURE:
+                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(sum_position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
             
             test_compelete([resp1, resp2])
 
