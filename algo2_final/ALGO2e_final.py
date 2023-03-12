@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 s = requests.Session()
-s.headers.update({'X-API-key': '6PXNU7YM'}) # Desktop
+s.headers.update({'X-API-key': 'GWMV82CC'}) # Desktop
 
 MAX_LONG_EXPOSURE = 25000
 MAX_SHORT_EXPOSURE = -25000
@@ -75,11 +75,30 @@ def get_ticker_position(ticker):
         book = resp.json()
         return book[index]['position']
 
+def rank_sd(market_prices):
+    """return the ranks of 0, 1, 2"""
+    ranks = {}
+    for i in range(3):
+        test_list = market_prices[i]
+        mean = sum(test_list) / len(test_list)
+        variance = sum([((x - mean) ** 2) for x in test_list]) / len(test_list)
+        sd = variance ** 0.5
+        ranks[sd] = i
+    sds = sorted(list(ranks.keys()))
+    res = []
+    for sd in sds:
+        res.append(ranks[sd])
+    return res
+
 def main():
     tick, status = get_tick()
     ticker_list = ['CNR','RY','AC']
+    market_prices = [[0.0] * 10] * 3
     
-    while status == 'ACTIVE':        
+
+    while status == 'ACTIVE':   
+        # rank all sd of the three; not trading on the first one      
+        ranks = rank_sd(market_prices)
 
         for i in range(3):
             
@@ -88,7 +107,13 @@ def main():
             net_position = get_ticker_position(ticker_symbol) # net position for particular ticker
             best_bid_price, best_ask_price = get_bid_ask(ticker_symbol)
             
-            
+            # update market prices
+            mid_price = (best_bid_price + best_ask_price)/2.0
+            market_prices[i] = market_prices[i][1:] + [mid_price]
+
+            # TODO: seletively enter the following lines
+            if i == ranks[0]:
+                continue
 
             # SET PRICE ADJUSTMENTS
             PRICE_ADJUSTMENT = 0
@@ -126,11 +151,11 @@ def main():
                 SHORT_VOLUME -= VOLUME_ADJUSTMENT
 
             if sum_position < MAX_LONG_EXPOSURE:
-                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-sum_position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
+                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-sum_position, LONG_VOLUME*0.8), 'price': LONG_PRICE, 'action': 'BUY'})
                 sum_position = get_position()
 
             if sum_position > MAX_SHORT_EXPOSURE:
-                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(sum_position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
+                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(sum_position-MAX_SHORT_EXPOSURE, SHORT_VOLUME*0.8), 'price': SHORT_PRICE, 'action': 'SELL'})
             
             test_compelete([resp1, resp2])
 
