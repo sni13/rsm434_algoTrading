@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 s = requests.Session()
-s.headers.update({'X-API-key': 'GWMV82CC'}) # Desktop
+s.headers.update({'X-API-key': '6PXNU7YM'}) # Desktop
 
 MAX_LONG_EXPOSURE = 25000
 MAX_SHORT_EXPOSURE = -25000

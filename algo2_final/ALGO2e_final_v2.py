@@ -94,6 +94,7 @@ def main():
     tick, status = get_tick()
     ticker_list = ['CNR','RY','AC']
     market_prices = [[0.0] * 10] * 3
+    
 
     while status == 'ACTIVE':   
         # rank all sd of the three; not trading on the first one      
@@ -108,7 +109,7 @@ def main():
             
             # update market prices
             mid_price = (best_bid_price + best_ask_price)/2.0
-            market_prices[i] = market_prices[i][1:].append(mid_price) 
+            market_prices[i] = market_prices[i][1:] + [mid_price]
 
             # TODO: seletively enter the following lines
             if i == ranks[0]:
@@ -150,11 +151,11 @@ def main():
                 SHORT_VOLUME -= VOLUME_ADJUSTMENT
 
             if sum_position < MAX_LONG_EXPOSURE:
-                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-sum_position, LONG_VOLUME), 'price': LONG_PRICE, 'action': 'BUY'})
+                resp1 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(MAX_LONG_EXPOSURE-sum_position, LONG_VOLUME*0.8), 'price': LONG_PRICE, 'action': 'BUY'})
                 sum_position = get_position()
 
             if sum_position > MAX_SHORT_EXPOSURE:
-                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(sum_position-MAX_SHORT_EXPOSURE, SHORT_VOLUME), 'price': SHORT_PRICE, 'action': 'SELL'})
+                resp2 = s.post('http://localhost:9999/v1/orders', params = {'ticker': ticker_symbol, 'type': 'LIMIT', 'quantity': min(sum_position-MAX_SHORT_EXPOSURE, SHORT_VOLUME*0.8), 'price': SHORT_PRICE, 'action': 'SELL'})
             
             test_compelete([resp1, resp2])
 
